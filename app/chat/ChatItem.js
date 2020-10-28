@@ -4,15 +4,22 @@ import {
   View,
   TouchableOpacity,
   Text,
-  StyleSheet, Dimensions
+  StyleSheet,
+  Dimensions,
+  Linking,
 } from 'react-native'
+import PropTypes from 'prop-types'
+import ParsedText from 'react-native-parsed-text';
+import Communications from 'react-native-communications'
 import TextMessage from './TextMessage'
 import ImageMessage from './ImageMessage'
 import VideoMessage from './VideoMessage'
 import VoiceMessage from './VoiceMessage'
 import { EMOJIS_DATA } from '../source/emojis'
-const { width } = Dimensions.get('window')
 
+const DEFAULT_OPTION_TITLES = ['Call', 'Text', 'Cancel'];
+const { width } = Dimensions.get('window');
+const WWW_URL_PATTERN = /^www\./i
 const PATTERNS = {
   url: /(https?:\/\/|www\.)[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&\/\/=]*)/i,
   phone: /[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,7}/,
@@ -26,6 +33,14 @@ export default class ChatItem extends PureComponent {
       loading: false,
       isSelect: false
     }
+  }
+
+  static contextTypes = {
+    actionSheet: PropTypes.func,
+  }
+
+  static defaultProps = {
+    optionTitles: DEFAULT_OPTION_TITLES,
   }
 
   componentDidMount () {
@@ -54,16 +69,83 @@ export default class ChatItem extends PureComponent {
     this.setState({ loading: status })
   }
 
+  onUrlPress = (url) => {
+    // When someone sends a message that includes a website address beginning with "www." (omitting the scheme),
+    // react-native-parsed-text recognizes it as a valid url, but Linking fails to open due to the missing scheme.
+    if (WWW_URL_PATTERN.test(url)) {
+      this.onUrlPress(`http://${url}`)
+    } else {
+      Linking.canOpenURL(url).then(supported => {
+        if (!supported) {
+          console.error('No handler for URL:', url)
+        } else {
+          Linking.openURL(url)
+        }
+      })
+    }
+  }
+
+  onPhonePress = (phone) => {
+    const { optionTitles } = this.props
+    const options =
+      optionTitles && optionTitles.length > 0
+        ? optionTitles.slice(0, 3)
+        : DEFAULT_OPTION_TITLES
+    const cancelButtonIndex = options.length - 1
+    this.context.actionSheet().showActionSheetWithOptions(
+      {
+        options,
+        cancelButtonIndex,
+      },
+      (buttonIndex) => {
+        switch (buttonIndex) {
+          case 0:
+            Communications.phonecall(phone, true)
+            break
+          case 1:
+            Communications.text(phone)
+            break
+          default:
+            break
+        }
+      },
+    )
+  }
+  onEmailPress = (email) => {
+    Communications.email([email], null, null, null, null);
+  }
+
   _matchContentString = (textContent, views, isSelf) => {
     // 匹配得到index并放入数组中
-    const {leftMessageTextStyle, rightMessageTextStyle} = this.props
+    const {leftMessageTextStyle, rightMessageTextStyle, textLink} = this.props
     if (textContent.length === 0) return
     let emojiIndex = textContent.search(PATTERNS.emoji)
     let checkIndexArray = []
 
     // 若匹配不到，则直接返回一个全文本
     if (emojiIndex === -1) {
-      views.push(<Text style={isSelf ? rightMessageTextStyle : leftMessageTextStyle} key={'emptyTextView' + (Math.random() * 100)}>{textContent}</Text>)
+      const textMessage = (
+        <ParsedText
+          style={isSelf ? rightMessageTextStyle : leftMessageTextStyle}
+          key={'emptyTextView' + Math.random() * 100}
+          parse={[
+            { type: 'url', style: {...styles.textLink, textLink}, onPress: this.onUrlPress },
+            {
+              type: 'phone',
+              style: {...styles.textLink, textLink},
+              onPress: this.onPhonePress,
+            },
+            {
+              type: 'email',
+              style: {...styles.textLink, textLink},
+              onPress: this.onEmailPress,
+            },
+          ]}
+        >
+          {textContent}
+        </ParsedText>
+      );
+      views.push(textMessage);
     } else {
       if (emojiIndex !== -1) {
         checkIndexArray.push(emojiIndex)
@@ -464,5 +546,8 @@ const styles = StyleSheet.create({
     color: '#aaa',
     marginBottom: 2,
     marginLeft: 14
+  },
+  textLink: {
+    color: '#0366d6'
   }
 })
