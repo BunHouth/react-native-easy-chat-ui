@@ -28,14 +28,15 @@
   },
   "homepage": "https://github.com/DaiYz/react-native-chat#readme",
   "peerDependencies": {
+    "@react-native-community/clipboard": "*",
     "prop-types": "*",
     "react": "*",
-    "react-native": "*",
-    "@react-native-community/clipboard": "*"
+    "react-native": "*"
   },
   "dependencies": {
     "@expo/react-native-action-sheet": "^3.8.0",
-    "moment": "^2.22.2",
+    "dayjs": "^1.9.4",
+    "react-native-communications": "^2.2.1",
     "react-native-parsed-text": "^0.0.22"
   },
   "devDependencies": {

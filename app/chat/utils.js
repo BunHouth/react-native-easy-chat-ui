@@ -1,4 +1,4 @@
-import moment from 'moment'
+import dayjs from 'dayjs'
 import {Dimensions, Platform} from 'react-native'
 import { EMOJIS_ZH, invertKeyValues } from '../source/emojis'
 
@@ -8,7 +8,7 @@ const getCurrentTime = (time = 0) => {
   const nowTime = new Date() // 当前日前对象
   const myyear = nowTime.getFullYear() // 当前年份
   const myday = nowTime.getDay() // 当前星期
-  const delay = moment().diff(moment(time).toArray().slice(0, 3), 'days') // 时间差
+  const delay = dayjs().diff(dayjs(time).toArray().slice(0, 3), 'days') // 时间差
   const old = new Date(parseInt(time)) // 目标日期对象
   const oldyear = old.getFullYear() // 目标年份
   const oldm = old.getMonth() + 1 // 目标月份
